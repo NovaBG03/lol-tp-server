@@ -16,8 +16,8 @@ public class EmailController {
         this.emailService = emailService;
     }
 
-    @PostMapping("send")
-    public String SendEmail(@RequestBody EmailInfoDto emailInfoDto) {
+    @PostMapping("ask")
+    public String AskQuestion(@RequestBody EmailInfoDto emailInfoDto) {
         emailService.askQuestion(emailInfoDto.getEmail(), emailInfoDto.getName(), emailInfoDto.getMessage());
 
         return "Ok!";
