@@ -23,8 +23,12 @@ public class EmailService {
     public void askQuestion(String email, String name, String question) {
         this.validateEmail(email);
 
-        sendEmail(email, "Question sent to LoLTP", "Your question: " + question);
-        sendEmail(lolTpEmail, "Question from " + name, "Sent by: " + email + "\n" + question);
+        this.sendEmail(email, "Question sent to LoLTP", "Your question: " + question);
+        this.sendEmailToLoLTp("Question from " + name, "Sent by: " + email + "\n" + question);
+    }
+
+    public void sendEmailToLoLTp(String subject, String content) {
+        this.sendEmail(lolTpEmail, subject, content);
     }
 
     public void sendEmail(String email, String subject, String content) {
