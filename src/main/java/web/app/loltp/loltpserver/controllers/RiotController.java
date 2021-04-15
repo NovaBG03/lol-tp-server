@@ -23,7 +23,7 @@ public class RiotController {
 
     @PostMapping("/register/team")
     public String registerTeam(@RequestBody TeamDto teamDto) {
-        this.riotService.registerTeam(teamDto.getName(), teamDto.getUsernames());
+        this.riotService.registerTeam(teamDto);
         return "Ok!";
     }
 }

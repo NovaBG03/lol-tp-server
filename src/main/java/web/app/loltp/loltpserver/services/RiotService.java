@@ -5,11 +5,14 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import web.app.loltp.loltpserver.dtos.PlayerDto;
 import web.app.loltp.loltpserver.dtos.SummonerDto;
+import web.app.loltp.loltpserver.dtos.TeamDto;
 import web.app.loltp.loltpserver.exceptions.LolTpException;
 
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class RiotService {
@@ -28,8 +31,8 @@ public class RiotService {
         this.emailService = emailService;
     }
 
-    public SummonerDto findSummoner(String username) {
-        String url = this.riotApiUrl + "/lol/summoner/v4/summoners/by-name/" + username;
+    public SummonerDto findSummoner(String summonerName) {
+        String url = this.riotApiUrl + "/lol/summoner/v4/summoners/by-name/" + summonerName;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
@@ -52,20 +55,55 @@ public class RiotService {
         throw new LolTpException("INVALID_USERNAME", HttpStatus.BAD_REQUEST);
     }
 
-    public void registerTeam(String teamName, String[] usernames) {
-        if (usernames.length != 5 || !areUsernamesValid(usernames)) {
+    public void registerTeam(TeamDto teamDto) {
+        final List<String> summonerNames = teamDto.getPlayers()
+                .stream()
+                .map(PlayerDto::getSummonerName)
+                .collect(Collectors.toList());
+
+        if (summonerNames.size() != 5 || !areUsernamesValid(summonerNames)) {
             throw new LolTpException("INVALID_USERNAMES", HttpStatus.BAD_REQUEST);
         }
 
-        String subject = "Registered Team - " + teamName;
-        String content = teamName + "\n\nSummoners:\n* " + String.join("\n* ", usernames);
+        String subject = "Registered Team - " + teamDto.getName();
+        String content = CreateContent(teamDto);
+
+        this.emailService.sendEmail(teamDto.getEmail(), subject, content);
         this.emailService.sendEmailToLoLTp(subject, content);
     }
 
-    private boolean areUsernamesValid(String[] usernames) {
+    private String CreateContent(TeamDto teamDto) {
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("Таг:  " + teamDto.getTag() + "\n");
+        contentBuilder.append("Име:  " + teamDto.getName() + "\n");
+        contentBuilder.append("Поща: " + teamDto.getEmail() + "\n");
+        contentBuilder.append("Тел:  " + teamDto.getPhone() + "\n");
+        contentBuilder.append("\n");
+
+        final String message = teamDto.getMessage() == null || teamDto.getMessage().isEmpty() ?
+                "Няма съобщене." : teamDto.getMessage();
+
+        contentBuilder.append("Допълнително съобщение: " + message + "\n");
+        contentBuilder.append("\n");
+
+
+        contentBuilder.append("Players:" + "\n");
+        for (PlayerDto player : teamDto.getPlayers()) {
+            contentBuilder.append("*  " + player.getSummonerName() + "  (" + player.getPlayerName() + ")\n");
+        }
+
+        contentBuilder.append("\n");
+        contentBuilder.append("\n");
+
+        contentBuilder.append("Регистрацията е завършена! Очаквайте графика на мачовете.");
+
+        return contentBuilder.toString();
+    }
+
+    private boolean areUsernamesValid(List<String> summonerNames) {
         try {
-            return Arrays.stream(usernames)
-                    .map(username -> this.findSummoner(username))
+            return summonerNames.stream()
+                    .map(summonerName -> this.findSummoner(summonerName))
                     .allMatch(summoner -> summoner != null);
         } catch (Exception ex) {
             return false;
